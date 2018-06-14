@@ -1,5 +1,9 @@
-$panoFileName = "pano.jpg"
-$imagemagick_convert = "im_convert.exe"
+Param (
+  [string]$panoOriginal = "pano.jpg"
+)
+
+$imagemagick_convert = "$PSScriptRoot\convert.exe"
+$panoFileName = $panoOriginal
 
 Try {
   $panoFile = (get-item $panoFileName -ErrorAction Stop)
@@ -14,17 +18,22 @@ Catch {
 # get image dimensions
 add-type -AssemblyName System.Drawing
 #$img = [System.Drawing.Image]::FromFile("$($panoBaseName).jpg"); # creates file lock
-$fs = New-Object System.IO.FileStream ("$($panoBaseName).jpg", [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+$fs = New-Object System.IO.FileStream ("$($panoPath)", [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
 $img = [System.Drawing.Image]::FromStream($fs)
 $fs.Dispose()
 
 $width = $img.Size.Width;
 $height = $img.Size.Height;
-$newHeight = $width / 2
 
 # print informations
 write-host "Path: $($panoPath)"
 write-host "Image Dimensions: $($width)x$($height)"
+
+if($width -gt 20480) {
+  $width = 20480
+}
+$newHeight = $width / 2
+
 write-host "New Image Dimensions: $($width)x$($newHeight)"
 
 Try {
@@ -36,8 +45,6 @@ Catch {
   break;
 }
 
-# Backup original pano equirectangular file
-copy-Item $panoFile "$($panoBaseName)_ori.jpg"
 
 # generate 600x300 preview
 write-host "generating preview 600x300 ($($panoBaseName)_preview.jpg)"
@@ -46,6 +53,10 @@ write-host "generating preview 600x300 ($($panoBaseName)_preview.jpg)"
 
 # expand panorama to 2:1 aspect ratio
 if($height -ne $newHeight) {
+  # Backup original pano equirectangular file
+  write-host "backup copy to $($panoBaseName)_ori.jpg"
+  copy-Item $panoFile "$($panoBaseName)_ori.jpg"
+  
   write-host "making pano 2:1 ($($width)x$($newHeight))"
   & $imagemagick_convert "$($panoBaseName).jpg" -background black -gravity south -extent "$($width)x$($newHeight)" "$($panoBaseName).jpg"
 }
@@ -53,6 +64,12 @@ if($height -ne $newHeight) {
 # create mobile fallback version
 write-host "create mobile browser fallback version ($($panoBaseName)_mobile.jpg)"
 & $imagemagick_convert "$($panoBaseName).jpg" -resize 4096x "$($panoBaseName)_mobile.jpg"
+
+# Generate pto from template with filename
+$ptoTPL = (Get-Content "$($PSScriptRoot)/pano_tpl.pto").replace("{{panofilename}}", "$($panoPath)") 
+$ptoTPL = $ptoTPL.replace("{{panowidth}}", "$($width)") 
+$ptoTPL = $ptoTPL.replace("{{panoheight}}", "$($newHeight)") 
+$ptoTPL | Set-Content "$($PSScriptRoot)/pano.pto"
 
 # create tif cube faces from equirectangular pano using nona
 write-host "creating tif cube faces with nona.exe"

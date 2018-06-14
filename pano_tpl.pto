@@ -4,12 +4,12 @@ p E0 R0 f0 h4096 n"TIFF_m" u0 v90 w4096
 m g1 i0 m2 p0.00784314
 
 # Image lines
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p0 r0 v360 w20480 y0
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p0 r0 v360 w20480 y-90
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p0 r0 v360 w20480 y180
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p0 r0 v360 w20480 y90
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p-90 r0 v360 w20480 y0
-i a0 b0 c0 d0 e0 f4 h10240 n"pano.jpg" p90 r0 v360 w20480 y0
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p0 r0 v360 w{{panowidth}} y0
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p0 r0 v360 w{{panowidth}} y-90
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p0 r0 v360 w{{panowidth}} y180
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p0 r0 v360 w{{panowidth}} y90
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p-90 r0 v360 w{{panowidth}} y0
+i a0 b0 c0 d0 e0 f4 h{{panoheight}} n"{{panofilename}}" p90 r0 v360 w{{panowidth}} y0
 
 # Variable lines
 v
