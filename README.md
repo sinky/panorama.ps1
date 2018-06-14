@@ -9,9 +9,9 @@ Example is based on a full horizontal (360°) and partial (-90° to 30°) vertic
 Stitched file has a width of 20480px and height of 7671px.
 
 ## Requirements
-  * ImageMagick's [convert](http://www.imagemagick.org/script/download.php#windows)
-  * nona, from [Hugin](http://hugin.sourceforge.net/)
-  * optional powershell
+  * [ImageMagick](http://www.imagemagick.org/script/download.php#windows) (convert)
+  * [Hugin](http://hugin.sourceforge.net/) (nona)
+  * powershell
 
 ## Panorama workflow steps
   - Stitching photos with Microsoft "[Image Composite Editor](https://www.microsoft.com/en-us/research/product/computational-photography-applications/image-composite-editor/)" (ICE) as equirectangular (sphere) projection.
