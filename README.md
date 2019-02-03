@@ -14,7 +14,7 @@ Stitched file has a width of 20480px and height of 7671px.
   * powershell
 
 ## Panorama workflow steps
-  - Stitching photos with Microsoft "[Image Composite Editor](https://www.microsoft.com/en-us/research/product/computational-photography-applications/image-composite-editor/)" (ICE) as equirectangular (sphere) projection.
+  - Stitching photos with Microsoft "[Image Composite Editor](https://www.microsoft.com/en-us/research/product/computational-photography-applications/image-composite-editor/)" (ICE) as equirectangular (sphere) projection. **In step 2 "STITCH", change "Pitch" under "Orientation" section to 90 degrees. In step 3 "CROP", click "Auto complete".**
   - generate 600x300 preview
   - expand panorama to 2:1 aspect ratio
   - create mobile browser fallback version
