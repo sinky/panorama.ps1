@@ -45,31 +45,32 @@ Catch {
   break;
 }
 
-
-# generate 600x300 preview
-write-host "generating preview 600x300 ($($panoBaseName)_preview.jpg)"
-& $imagemagick_convert $panoFile -resize x300 "$($panoBaseName)_preview.jpg"
-& $imagemagick_convert "$($panoBaseName)_preview.jpg" -gravity center -crop 600x300+0+0 "$($panoBaseName)_preview.jpg"
-
-# expand panorama to 2:1 aspect ratio
-if($height -ne $newHeight) {
-  # Backup original pano equirectangular file
-  write-host "backup copy to $($panoBaseName)_ori.jpg"
-  copy-Item $panoFile "$($panoBaseName)_ori.jpg"
-  
-  write-host "making pano 2:1 ($($width)x$($newHeight))"
-  & $imagemagick_convert "$($panoBaseName).jpg" -background black -gravity south -extent "$($width)x$($newHeight)" "$($panoBaseName).jpg"
-}
-
-# create mobile fallback version
-write-host "create mobile browser fallback version ($($panoBaseName)_mobile.jpg)"
-& $imagemagick_convert "$($panoBaseName).jpg" -resize 4096x "$($panoBaseName)_mobile.jpg"
-
-# Generate pto from template with filename
+# Generate ptos from template with filename
 $ptoTPL = (Get-Content "$($PSScriptRoot)/pano_tpl.pto").replace("{{panofilename}}", "$($panoPath)") 
 $ptoTPL = $ptoTPL.replace("{{panowidth}}", "$($width)") 
 $ptoTPL = $ptoTPL.replace("{{panoheight}}", "$($newHeight)") 
-$ptoTPL | Set-Content "$($PSScriptRoot)/pano.pto"
+
+$previewTPL = $ptoTPL.replace("{{preview}}", "`n") 
+$previewTPL | Set-Content "$($PSScriptRoot)/preview.pto"
+
+$cubeTPL = $ptoTPL.replace("{{cube}}", "`n") 
+$cubeTPL | Set-Content "$($PSScriptRoot)/pano.pto"
+
+# fix the pitch of equirectangular pano for previews using nona
+write-host "creating tif preview with nona.exe"
+& "C:\Program Files\Hugin\bin\nona.exe" -o pano "$($PSScriptRoot)/preview.pto"
+
+write-host "convert preview to jpg and remove tif files"
+Get-ChildItem "*.tif" | %{& $imagemagick_convert "$($_)" "$($panoBaseName)_preview_original.jpg"; Remove-Item "$_" }
+
+# generate 600x300 preview
+write-host "generating preview 600x300 ($($panoBaseName)_preview.jpg)"
+& $imagemagick_convert "$($panoBaseName)_preview_original.jpg" -resize x300 "$($panoBaseName)_preview.jpg"
+& $imagemagick_convert "$($panoBaseName)_preview.jpg" -gravity center -crop 600x300+0+0 "$($panoBaseName)_preview.jpg"
+
+# create mobile fallback version
+write-host "create mobile browser fallback version ($($panoBaseName)_mobile.jpg)"
+& $imagemagick_convert "$($panoBaseName)_preview_original.jpg" -resize 4096x "$($panoBaseName)_mobile.jpg"
 
 # create tif cube faces from equirectangular pano using nona
 write-host "creating tif cube faces with nona.exe"
@@ -78,3 +79,8 @@ write-host "creating tif cube faces with nona.exe"
 # convert cube faces to jpg and remove tif files
 write-host "convert cube faces to jpg and remove tif files"
 Get-ChildItem "*.tif" | %{ write-host "converting $($_.Name)"; & $imagemagick_convert "$($_)" "$($_.Basename).jpg"; Remove-Item "$_" }
+
+# remove created temporary files
+Remove-Item "$($panoBaseName)_preview_original.jpg"
+Remove-Item "preview.pto"
+Remove-Item "pano.pto"
