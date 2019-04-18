@@ -68,9 +68,6 @@ if($fixPitch) {
 
 	write-host "fix pitch of pano with nona.exe"
 	& $nona -o pano "$($PSScriptRoot)/pano_fix_pitch.pto"
-
-	Remove-Item "pano.jpg"
-	Rename-Item "pano0000.jpg" "pano.jpg"
 }
 
 # create mobile browser version (4096px wide equirectangular)
