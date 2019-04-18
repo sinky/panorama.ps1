@@ -1,6 +1,6 @@
 # Created by Panotools::Script 0.28
 
-p E0 R0 f2 h{{panoheight}} n"JPEG_m" u0 v360 w{{panowidth}}
+p E0 R0 f2 h{{panoheight}} n"JPEG" u0 v360 w{{panowidth}}
 m g1 i0 m2 p0.00784314
 
 # Image lines
