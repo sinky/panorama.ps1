@@ -1,32 +1,38 @@
 Param (
-  [string]$panoOriginal = "pano.jpg"
+  [Parameter(Mandatory=$true)][string]$panoOriginal,
+  [switch]$fixPitch,
+  [switch]$expandTop
 )
 
 $imagemagick_convert = "$PSScriptRoot\convert.exe"
-$panoFileName = $panoOriginal
+$nona = "C:\Program Files\Hugin\bin\nona.exe"
 
+$workingDir = $(Get-Location)
+
+# Get path details
 Try {
-  $panoFile = (get-item $panoFileName -ErrorAction Stop)
+  $panoFile = (get-item $panoOriginal -ErrorAction Stop)
   $panoPath = $panoFile.fullname
   $panoBaseName = $panoFile.Basename
+  $panoDir = $panoFile.Directory
 }
 Catch {
-  write-error "File pano.jpg not Found"
+  write-host -ForegroundColor red "File $panoOriginal not Found"
   break;
 }
 
 # get image dimensions
 add-type -AssemblyName System.Drawing
-#$img = [System.Drawing.Image]::FromFile("$($panoBaseName).jpg"); # creates file lock
-$fs = New-Object System.IO.FileStream ("$($panoPath)", [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+$fs = New-Object System.IO.FileStream ("$panoPath", [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
 $img = [System.Drawing.Image]::FromStream($fs)
 $fs.Dispose()
 
-$width = $img.Size.Width;
-$height = $img.Size.Height;
+$width = $img.Size.Width
+$height = $img.Size.Height
 
 # print informations
 write-host "Path: $($panoPath)"
+write-host "Wordking Dir: $($workingDir)"
 write-host "Image Dimensions: $($width)x$($height)"
 
 if($width -gt 20480) {
@@ -41,40 +47,51 @@ Try {
   $test = 1/$height
 }
 Catch {
-  write-error "size error"
+  write-host -ForegroundColor red "size error"
   break;
 }
 
+# copy original to wirking dir with uniform filename to work with later
+Copy-Item "$panoPath" "pano.jpg"
 
-# generate 600x300 preview
-write-host "generating preview 600x300 ($($panoBaseName)_preview.jpg)"
-& $imagemagick_convert $panoFile -resize x300 "$($panoBaseName)_preview.jpg"
-& $imagemagick_convert "$($panoBaseName)_preview.jpg" -gravity center -crop 600x300+0+0 "$($panoBaseName)_preview.jpg"
-
-# expand panorama to 2:1 aspect ratio
-if($height -ne $newHeight) {
-  # Backup original pano equirectangular file
-  write-host "backup copy to $($panoBaseName)_ori.jpg"
-  copy-Item $panoFile "$($panoBaseName)_ori.jpg"
-  
-  write-host "making pano 2:1 ($($width)x$($newHeight))"
-  & $imagemagick_convert "$($panoBaseName).jpg" -background black -gravity south -extent "$($width)x$($newHeight)" "$($panoBaseName).jpg"
+# if needed, expand panorama to 2:1 aspect ratio with black
+if(($height/$width) -ne 0.5) {
+	write-host "expand pano to ratio 2:1 ($($width)x$($newHeight))"
+	& $imagemagick_convert "$workingDir/pano.jpg" -background black -gravity south -extent "$($width)x$($newHeight)" "$workingDir/pano.jpg"
 }
 
-# create mobile fallback version
-write-host "create mobile browser fallback version ($($panoBaseName)_mobile.jpg)"
-& $imagemagick_convert "$($panoBaseName).jpg" -resize 4096x "$($panoBaseName)_mobile.jpg"
+# if specified, fix pitch of equirectangular pano using nona
+if($fixPitch) {
+	$ptoTPL = (Get-Content "$($PSScriptRoot)/pano_fix_pitch_tpl.pto").replace("{{panofilename}}", "$workingDir/pano.jpg")
+	$ptoTPL = $ptoTPL.replace("{{panowidth}}", "$width").replace("{{panoheight}}", "$newHeight")
+	$ptoTPL | Set-Content "$($PSScriptRoot)/pano_fix_pitch.pto"
 
-# Generate pto from template with filename
-$ptoTPL = (Get-Content "$($PSScriptRoot)/pano_tpl.pto").replace("{{panofilename}}", "$($panoPath)") 
-$ptoTPL = $ptoTPL.replace("{{panowidth}}", "$($width)") 
-$ptoTPL = $ptoTPL.replace("{{panoheight}}", "$($newHeight)") 
-$ptoTPL | Set-Content "$($PSScriptRoot)/pano.pto"
+	write-host "fix pitch of pano with nona.exe"
+	& $nona -o pano "$($PSScriptRoot)/pano_fix_pitch.pto"
 
-# create tif cube faces from equirectangular pano using nona
-write-host "creating tif cube faces with nona.exe"
-& "C:\Program Files\Hugin\bin\nona.exe" -o pano "$($PSScriptRoot)/pano.pto"
+	Remove-Item "pano.jpg"
+	Rename-Item "pano0000.jpg" "pano.jpg"
+}
 
-# convert cube faces to jpg and remove tif files
-write-host "convert cube faces to jpg and remove tif files"
-Get-ChildItem "*.tif" | %{ write-host "converting $($_.Name)"; & $imagemagick_convert "$($_)" "$($_.Basename).jpg"; Remove-Item "$_" }
+# create mobile browser version (4096px wide equirectangular)
+if(-not (Test-Path "pano_mobile.jpg")) {
+	write-host "create mobile browser version pano_mobile.jpg"
+	& $imagemagick_convert "pano.jpg" -resize 4096x "pano_mobile.jpg"
+}
+
+# generate 1000px wide preview (from mobile version because it's faster)
+if(-not (Test-Path "pano_preview.jpg")) {
+	write-host "generating poster 1000x500 pano_preview.jpg"
+	& $imagemagick_convert "pano_mobile.jpg" -resize 1000x "pano_preview.jpg"
+}
+
+# create cube faces from equirectangular pano using nona
+if(-not (Test-Path "pano0000.jpg")) {
+	# Generate pto from template with filename
+	$ptoTPL = (Get-Content "$($PSScriptRoot)/pano_tpl.pto").replace("{{panofilename}}", "$workingDir/pano.jpg")
+	$ptoTPL = $ptoTPL.replace("{{panowidth}}", "$width").replace("{{panoheight}}", "$newHeight")
+	$ptoTPL | Set-Content "$($PSScriptRoot)/pano.pto"
+
+	write-host "creating cube faces with nona.exe"
+	& $nona -o pano "$($PSScriptRoot)/pano.pto"
+}
