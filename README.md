@@ -22,12 +22,12 @@ If it isn't, the top is filled with black to accomplish the 2:1 ratio.
   - run ```panorama.ps1 -panoOriginal <path_to_exported_panorama>```
     - if you previously changed the pitch append the ```-fixPitch``` parameter 
 
-## What does Panorama.ps1?
+## What does Panorama.ps1 do?
   - copys the panorama in to the workdir
-  - if needed, expands panorama to 2:1 aspect ratio with black
   - if specified, fixes the pitch of equirectangular pano using nona
-  - creates mobile browser fallback version
   - generates 1000px wide preview
+  - if needed, expands panorama to 2:1 aspect ratio with black
+  - creates mobile browser fallback version
   - creates cube faces from equirectangular pano using nona
 
 ### Webviewer
