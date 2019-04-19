@@ -55,14 +55,8 @@ if(-not (Test-Path "$($panoFileName)")) {
 	Copy-Item "$panoPath" "$($panoFileName)"
 }
 
-# if needed, expand panorama to 2:1 aspect ratio with black
-if(($height/$width) -ne 0.5) {
-	write-host "expand pano to ratio 2:1 ($($width)x$($newHeight))"
-	& $imagemagick_convert "$panoFileName" -background black -gravity south -extent "$($width)x$($newHeight)" "$panoFileName"
-}
-
 # if specified, fix pitch of equirectangular pano using nona
-if($fixPitch) {
+if($fixPitch -and ($height/$width) -eq 0.5) {
 	$ptoTPL = (Get-Content "$($PSScriptRoot)/pano_fix_pitch_tpl.pto").replace("{{panofilename}}", "$workingDir/$panoFileName")
 	$ptoTPL = $ptoTPL.replace("{{panowidth}}", "$width").replace("{{panoheight}}", "$newHeight")
 	$ptoTPL | Set-Content "$($PSScriptRoot)/pano_fix_pitch.pto"
@@ -71,21 +65,32 @@ if($fixPitch) {
 	& $nona -o pano "$($PSScriptRoot)/pano_fix_pitch.pto"
 	
 	write-host "compress fixed pano"
-	Remove-Item "$panoFileName"
-	Rename-Item "pano.jpg" "$panoFileName"
-	& $imagemagick_convert -quality 85% "$panoFileName" "$panoFileName"
+	& $imagemagick_convert -quality 85% "pano.jpg" "$panoFileName"
+	Remove-Item "pano.jpg"
+}elseif($fixPitch -and ($height/$width) -ne 0.5) {
+  write-host -ForegroundColor red "Parameter -fixPitch is given but the image aspect ratio isn't 2:1. I think it has to be, though."
+  break;
+}
+
+# generate 1000px wide preview
+if(-not (Test-Path "pano_preview.jpg")) {
+	write-host "generating poster 1000x500 pano_preview.jpg"
+	& $imagemagick_convert "$panoFileName" -resize 1000x "pano_preview.jpg"
+}
+
+# if needed, expand panorama to 2:1 aspect ratio with black
+# should run after preview and only when pitch wasn't changed
+if(-not($fixPitch)) {
+	if(($height/$width) -ne 0.5) {
+		write-host "expand pano to ratio 2:1 ($($width)x$($newHeight))"
+		& $imagemagick_convert "$panoFileName" -background black -gravity south -extent "$($width)x$($newHeight)" "$panoFileName"
+	}
 }
 
 # create mobile browser version (4096px wide equirectangular)
 if(-not (Test-Path "pano_mobile.jpg")) {
 	write-host "create mobile browser version pano_mobile.jpg"
 	& $imagemagick_convert "$panoFileName" -resize 4096x "pano_mobile.jpg"
-}
-
-# generate 1000px wide preview (from mobile version because it's faster, trim possible black from expanding)
-if(-not (Test-Path "pano_preview.jpg")) {
-	write-host "generating poster 1000x500 pano_preview.jpg"
-	& $imagemagick_convert "pano_mobile.jpg" -fuzz 10% -trim -resize 1000x "pano_preview.jpg"
 }
 
 # create cube faces from equirectangular pano using nona
